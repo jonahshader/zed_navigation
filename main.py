@@ -80,7 +80,7 @@ class ZedPosRenderer(arcade.Window):
             gray = cv2.cvtColor(image_ocv, cv2.COLOR_BGR2GRAY)
 
             for i in range(200):
-                x_pos = (i / 299) * self.image_size.width
+                x_pos = (i / 199) * self.image_size.width
                 point = self.point_cloud.get_value(x_pos, self.image_size.height / 2)
                 points.append(point)
 
@@ -109,8 +109,8 @@ class ZedPosRenderer(arcade.Window):
 
         # yaw_line_x = math.cos(-yaw + math.pi / 2) * 15 + tx
         # yaw_line_z = math.sin(-yaw + math.pi / 2) * 15 + tz
-        yaw_line_x = math.cos(yaw) * 15 + tx
-        yaw_line_z = math.sin(yaw) * 15 + tz
+        yaw_line_x = math.cos(-yaw - math.pi/2) * 15 + tx
+        yaw_line_z = math.sin(-yaw - math.pi/2) * 15 + tz
         # arcade.draw_line(SCREEN_WIDTH / 2 + tx * PIXELS_PER_METER, SCREEN_HEIGHT / 2 - tz * PIXELS_PER_METER,
         #                  SCREEN_WIDTH / 2 + yaw_line_x * PIXELS_PER_METER,
         #                  SCREEN_HEIGHT / 2 - yaw_line_z * PIXELS_PER_METER, arcade.color.GREEN)
@@ -140,7 +140,7 @@ class ZedPosRenderer(arcade.Window):
             #                           p[1][2] * PIXELS_PER_METER / 4 + SCREEN_HEIGHT/2, 2, cloud_color)
 
         for p in self.stored_transformed_points:
-            arcade.draw_circle_filled(p[0] * PIXELS_PER_METER + SCREEN_WIDTH/2, p[1] * PIXELS_PER_METER + SCREEN_HEIGHT/2,
+            arcade.draw_circle_filled(p[0] * PIXELS_PER_METER + SCREEN_WIDTH/2, -p[1] * PIXELS_PER_METER + SCREEN_HEIGHT/2,
                                       2, arcade.color.BLACK)
         # arcade.draw_line(self.time * 10, 0, SCREEN_WIDTH, SCREEN_HEIGHT, arcade.color.BLACK, 2)
         self.time += 1 / 60.0
