@@ -1,26 +1,23 @@
 import math
 
-import cv2
 import arcade
 import pyzed.sl as sl
-import numpy as np
+
+from cost_field import CostField
 
 SCREEN_WIDTH = 1024
 SCREEN_HEIGHT = 1024
-SCREEN_TITLE = "ZED pos tester"
+SCREEN_TITLE = 'Cost field demo'
 
-MAX_STORED_POINTS = 2000
-
-PIXELS_PER_METER = 100  # 500
+PIXELS_PER_METER = 32
 
 
-class ZedPosRenderer(arcade.Window):
+class CostFieldDemo(arcade.Window):
     def __init__(self):
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
         arcade.set_background_color(arcade.csscolor.WHITE)
         self.time = 0
-        self.stored_transformed_points = []
-
+        self.cost_field = CostField()
 
         # create a camera object
         self.zed = sl.Camera()
@@ -57,8 +54,9 @@ class ZedPosRenderer(arcade.Window):
         self.depth_image_zed = sl.Mat(self.image_size.width, self.image_size.height, sl.MAT_TYPE.U8_C4)
         self.point_cloud = sl.Mat()
 
+    # ??? what does setup do again
     def setup(self):
-        self.time = 0.0
+        self.time = 0
 
     def on_draw(self):
         tx = 0
@@ -67,22 +65,36 @@ class ZedPosRenderer(arcade.Window):
         pitch = 0
         yaw = 0
         roll = 0
-        points = []
         if self.zed.grab(self.runtime_parameters) == sl.ERROR_CODE.SUCCESS:
+            # TODO: remove retrieve_image?
             self.zed.retrieve_image(self.image_zed, sl.VIEW.LEFT, sl.MEM.CPU, self.image_size)
             self.zed.retrieve_image(self.depth_image_zed, sl.VIEW.DEPTH, sl.MEM.CPU, self.image_size)
             self.zed.retrieve_measure(self.point_cloud, sl.MEASURE.XYZRGBA, sl.MEM.CPU, self.image_size)
 
-            image_ocv = self.image_zed.get_data()
-            depth_image_ocv = self.depth_image_zed.get_data()
+            self.zed.get_position(self.zed_pose, sl.REFERENCE_FRAME.WORLD)
+            self.zed.get_sensors_data(self.zed_sensors, sl.TIME_REFERENCE.IMAGE)
+            zed_imu = self.zed_sensors.get_imu_data()
 
-            gray = cv2.cvtColor(image_ocv, cv2.COLOR_BGR2GRAY)
+            py_translation = sl.Translation()
+            tx = self.zed_pose.get_translation(py_translation).get()[0]
+            ty = self.zed_pose.get_translation(py_translation).get()[1]
+            tz = self.zed_pose.get_translation(py_translation).get()[2]
+            pitch = self.zed_pose.get_rotation_vector()[0]
+            yaw = self.zed_pose.get_rotation_vector()[1]
+            roll = self.zed_pose.get_rotation_vector()[2]
 
             for i in range(200):
                 x_pos = (i / 199) * self.image_size.width
-                point = self.point_cloud.get_value(x_pos, self.image_size.height / 2)
-                points.append(point)
-
+                p = self.point_cloud.get_value(x_pos, self.image_size.height / 2)
+                # self.cost_field.add_point(point[1])
+                point_angle = math.atan2(p[1][2], p[1][0])
+                point_distance = math.sqrt(p[1][2] * p[1][2] + p[1][0] * p[1][0])
+                point_angle_rotated = point_angle + -yaw
+                point_rotated = (
+                    math.cos(point_angle_rotated) * point_distance, math.sin(point_angle_rotated) * point_distance)
+                point_transformed = (point_rotated[0] + tx, point_rotated[1] + tz)
+                if not math.isnan(point_transformed[0]) and (not math.isnan(point_transformed[1])):
+                    self.cost_field.add_point(point_transformed)
             # point = self.point_cloud.get_value(self.image_size.width/2, self.image_size.height/2)
             # distance = math.sqrt(point[1][0]*point[1][0] + point[1][1]*point[1][1] + point[1][2]*point[1][2])
 
@@ -100,53 +112,20 @@ class ZedPosRenderer(arcade.Window):
             print("Translation: Tx: {0}, Ty: {1}, Tz {2}\n".format(tx, ty, tz))
             print(f'Rotation: Pitch: {pitch}, Roll: {roll}, Yaw: {yaw}')
 
+        print('start render')
         arcade.start_render()
-        # arcade.draw_point(SCREEN_WIDTH / 2 + tx * PIXELS_PER_METER, SCREEN_HEIGHT / 2 - tz * PIXELS_PER_METER,
-        #                   arcade.color.BLACK, pow(2, ty) * 20)
-        arcade.draw_point(SCREEN_WIDTH / 2 + tx * PIXELS_PER_METER, SCREEN_HEIGHT / 2 + tz * PIXELS_PER_METER,
-                          arcade.color.BLACK, pow(2, ty) * 20)
-
-        # yaw_line_x = math.cos(-yaw + math.pi / 2) * 15 + tx
-        # yaw_line_z = math.sin(-yaw + math.pi / 2) * 15 + tz
-        yaw_line_x = math.cos(-yaw - math.pi/2) * 15 + tx
-        yaw_line_z = math.sin(-yaw - math.pi/2) * 15 + tz
-        # arcade.draw_line(SCREEN_WIDTH / 2 + tx * PIXELS_PER_METER, SCREEN_HEIGHT / 2 - tz * PIXELS_PER_METER,
-        #                  SCREEN_WIDTH / 2 + yaw_line_x * PIXELS_PER_METER,
-        #                  SCREEN_HEIGHT / 2 - yaw_line_z * PIXELS_PER_METER, arcade.color.GREEN)
-        arcade.draw_line(SCREEN_WIDTH / 2 + tx * PIXELS_PER_METER, SCREEN_HEIGHT / 2 + tz * PIXELS_PER_METER,
-                         SCREEN_WIDTH / 2 + yaw_line_x * PIXELS_PER_METER,
-                         SCREEN_HEIGHT / 2 - yaw_line_z * PIXELS_PER_METER, arcade.color.GREEN)
-
-        for p in points:
-            # arcade.draw_line(SCREEN_WIDTH/2, SCREEN_HEIGHT,  SCREEN_WIDTH/2 + p[1][0], SCREEN_HEIGHT/2 + p[1][2],
-            #                  arcade.color.BLACK)
-            cloud_color = arcade.color.BLACK
-            if abs(p[1][1]) > 0.1:
-                cloud_color = arcade.color.RED
-
-            point_angle = math.atan2(p[1][2], p[1][0])
-            point_distance = math.sqrt(p[1][2] * p[1][2] + p[1][0] * p[1][0])
-
-            point_angle_rotated = point_angle + -yaw
-            point_rotated = (
-            math.cos(point_angle_rotated) * point_distance, math.sin(point_angle_rotated) * point_distance)
-            point_transformed = (point_rotated[0] + tx, point_rotated[1] + tz)
-            self.stored_transformed_points.append(point_transformed)
-            while len(self.stored_transformed_points) > MAX_STORED_POINTS:
-                self.stored_transformed_points.pop(0)
-
-            # arcade.draw_circle_filled(p[1][0] * PIXELS_PER_METER / 4 + SCREEN_WIDTH/2,
-            #                           p[1][2] * PIXELS_PER_METER / 4 + SCREEN_HEIGHT/2, 2, cloud_color)
-
-        for p in self.stored_transformed_points:
-            arcade.draw_circle_filled(p[0] * PIXELS_PER_METER + SCREEN_WIDTH/2, -p[1] * PIXELS_PER_METER + SCREEN_HEIGHT/2,
-                                      2, arcade.color.BLACK)
-        # arcade.draw_line(self.time * 10, 0, SCREEN_WIDTH, SCREEN_HEIGHT, arcade.color.BLACK, 2)
-        self.time += 1 / 60.0
+        print('add point')
+        # self.cost_field.add_point((math.cos(self.time * 2) * 4, math.sin(self.time * 3) * 4))
+        print('update')
+        self.cost_field.update((tx, tz))
+        print('draw')
+        self.cost_field.display_all_fields(PIXELS_PER_METER, (512, 512))
+        self.time += 1/60
+        print('rendered')
 
 
 def main():
-    window = ZedPosRenderer()
+    window = CostFieldDemo()
     window.setup()
     arcade.run()
 
