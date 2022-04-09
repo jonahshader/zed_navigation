@@ -28,6 +28,10 @@ def b_dist(b, samples=100):
     return dist
 
 
+# class Bezier:
+#     def __init__(self):
+#
+
 class LUT:
     def __init__(self):
         self._lut = []

@@ -41,7 +41,7 @@ class BezierCurveDemo(arcade.Window):
         #     point = self.b(i/25)
         #     arcade.draw_point(point[0], point[1], arcade.csscolor.BLACK, 4)
 
-        self.lut.generate(self.b)
+        self.lut.generate(self.b, samples=50)
         dist = self.lut.distance
         for i in range(0, 26):
             curr_dist = (i / 25) * dist
