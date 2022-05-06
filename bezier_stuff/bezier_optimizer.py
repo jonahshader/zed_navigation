@@ -1,6 +1,6 @@
 from typing import Callable, List
 
-from bezier import Bezier
+from bezier_stuff.bezier import Bezier
 from cost_field import CostField
 
 
@@ -9,16 +9,19 @@ def make_loss(field: CostField, samples=100) -> Callable[[Bezier], float]:
         dist = bezier.get_distance()
         avgcost = 0.0
         for n in range(samples):
-            avgcost += field.get_cost(bezier.get(dist/n))
-        return avgcost / samples
+            avgcost += field.get_cost(bezier.get(n / samples))
+        return avgcost * dist / samples
+
     return loss
 
-def optimize_bezier_inner_points(bezier: Bezier, loss: Callable[[Bezier], float], popsize=10, gensize=10, init_mutation=3.0, mutation_scalar=0.5) -> Bezier:
+
+def optimize_bezier_inner_points(bezier: Bezier, loss: Callable[[Bezier], float], popsize=10, gensize=10,
+                                 init_mutation=3.0, mutation_scalar=0.5) -> Bezier:
     pop: List[Bezier] = [bezier.copy() for _ in range(popsize)]
 
     best = pop[0]
     for g in range(gensize):
-        mutate_amount = init_mutation * mutation_scalar**g
+        mutate_amount = init_mutation * mutation_scalar ** g
         for b in pop:
             b.mutate_point(mutate_amount, 1)
             b.mutate_point(mutate_amount, 2)
@@ -27,6 +30,7 @@ def optimize_bezier_inner_points(bezier: Bezier, loss: Callable[[Bezier], float]
             if b != best:
                 b.copyfrom(best)
     return best
+
 
 def optimize_bezier_inner_points_on_field(bezier: Bezier, field: CostField, samples=100, **kwargs) -> Bezier:
     loss = make_loss(field, samples)

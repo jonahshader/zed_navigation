@@ -1,3 +1,4 @@
+import arcade
 import numpy as np
 from typing import List, Tuple
 
@@ -18,10 +19,17 @@ class Bezier:
             self.set_point(bezier.pts[i], i)
 
     def get_distance(self) -> float:
-        if self.stale == True:
+        if self.stale:
             self.lut.generate(self.b, self.samples)
             self.stale = False
-            return self.lut.distance
+        return self.lut.distance
+
+    def render(self, scale, offset):
+        dist = self.get_distance()
+        for i in range(self.samples):
+            curr_dist = (i / (self.samples - 1)) * dist
+            point = self.get(curr_dist)
+            arcade.draw_point(point[0] * scale + offset[0], point[1] * scale + offset[1], arcade.csscolor.GREEN, 4)
 
 
     def mutate(self, amount):
@@ -44,8 +52,8 @@ class Bezier:
         return self.b(self.lut.lookup_t(distance))
         # return self.lut.lookup_t(distance)
 
-def make_straight_bezier(start_point: np.ndarray, end_point: np.ndarray, **kwargs) -> Bezier:
-    return Bezier(start_point, start_point * (2/3) + end_point * (1/3), start_point * (1/3) + end_point * (2/3), end_point, **kwargs)
+def make_straight_bezier(start_point: np.ndarray, end_point: np.ndarray, samples=50) -> Bezier:
+    return Bezier(start_point, start_point * (2/3) + end_point * (1/3), start_point * (1/3) + end_point * (2/3), end_point, samples=samples)
 
 
 def lerp(p0, p1, t):

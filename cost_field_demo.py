@@ -20,7 +20,7 @@ class CostFieldDemo(arcade.Window):
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
         arcade.set_background_color(arcade.csscolor.WHITE)
         self.time = 0
-        self.cost_field = CostField()
+        self.cost_field = CostField(beta=0.9)
         self.target_pos = np.array([0.0, 3.0])
 
 
@@ -134,6 +134,7 @@ class CostFieldDemo(arcade.Window):
         self.cost_field.update((tx, tz))
         print('draw')
         self.cost_field.display_all_fields(PIXELS_PER_METER, (512, 512))
+        optimized_bezier.render(PIXELS_PER_METER, (512, 512))
         self.time += 1/60
         print('rendered')
 

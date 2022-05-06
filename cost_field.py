@@ -69,6 +69,8 @@ class CostField:
             point_in_field = (math.floor(point[0] / self.cell_size) % self.field_size,
                               math.floor(point[1] / self.cell_size) % self.field_size)
             return field[point_in_field[1], point_in_field[0]]
+        else:
+            return 1.0
 
 
     def display_all_fields(self, pixels_per_meter, offset):
