@@ -1,4 +1,5 @@
 import math
+from typing import Tuple
 
 import arcade
 
@@ -33,7 +34,9 @@ class CostField:
         if field is not None:
             point_in_field = (math.floor(point[0] / self.cell_size) % self.field_size,
                               math.floor(point[1] / self.cell_size) % self.field_size)
-            field[point_in_field[1], point_in_field[0]] += (1 - self.beta)
+            newval = field[point_in_field[1], point_in_field[0]] + (1 - self.beta)
+            field[point_in_field[1], point_in_field[0]] = min(newval, 1.0)
+
 
     def update(self, cam_pos):
         self.cam_pos = cam_pos
@@ -56,6 +59,17 @@ class CostField:
                 pos = (cam_field_pos[0] + x, cam_field_pos[1] + y)
                 if pos not in self.fields:
                     self.__make_field(pos)
+
+    # TODO: make bilinear interpolated version
+
+    def get_cost(self, point) -> float:
+        """point can be either tuple or np.ndarray"""
+        field = self.__get_field_at_point(point)
+        if field is not None:
+            point_in_field = (math.floor(point[0] / self.cell_size) % self.field_size,
+                              math.floor(point[1] / self.cell_size) % self.field_size)
+            return field[point_in_field[1], point_in_field[0]]
+
 
     def display_all_fields(self, pixels_per_meter, offset):
         for field_pos, field in self.fields.items():

@@ -1,4 +1,51 @@
 import numpy as np
+from typing import List, Tuple
+
+
+class Bezier:
+    def __init__(self, p0: np.ndarray, p1: np.ndarray, p2: np.ndarray, p3: np.ndarray, samples=50):
+        self.pts: List[np.ndarray] = [p0, p1, p2, p3]
+        self.samples = samples
+        self.stale = True
+        self.lut = LUT()
+        self.b = lambda t: b_cubic(self.pts[0], self.pts[1], self.pts[2], self.pts[3], t)
+
+    def copy(self):
+        return Bezier(np.copy(self.pts[0]), np.copy(self.pts[1]), np.copy(self.pts[2]), np.copy(self.pts[3]))
+
+    def copyfrom(self, bezier):
+        for i in range(len(self.pts)):
+            self.set_point(bezier.pts[i], i)
+
+    def get_distance(self) -> float:
+        if self.stale == True:
+            self.lut.generate(self.b, self.samples)
+            self.stale = False
+            return self.lut.distance
+
+
+    def mutate(self, amount):
+        for p in self.pts:
+            p += np.random.normal(scale=amount, size=p.size)
+        self.stale = True
+
+    def mutate_point(self, amount, index):
+        self.pts[index] += np.random.normal(scale=amount, size=self.pts[index].size)
+        self.stale = True
+
+    def set_point(self, point: np.ndarray, index: int):
+        np.copyto(self.pts[index], point)
+        self.stale = True
+
+    def get(self, distance) -> Tuple:
+        if self.stale:
+            self.lut.generate(self.b, self.samples)
+            self.stale = False
+        return self.b(self.lut.lookup_t(distance))
+        # return self.lut.lookup_t(distance)
+
+def make_straight_bezier(start_point: np.ndarray, end_point: np.ndarray, **kwargs) -> Bezier:
+    return Bezier(start_point, start_point * (2/3) + end_point * (1/3), start_point * (1/3) + end_point * (2/3), end_point, **kwargs)
 
 
 def lerp(p0, p1, t):
@@ -50,7 +97,7 @@ class LUT:
             pp = p
         self.distance = dist
 
-    def lookup_t(self, distance):
+    def lookup_t(self, distance) -> float:
         valid_index = -1
         for idx, val in enumerate(self._lut):
             if val[0] > distance:
@@ -58,11 +105,11 @@ class LUT:
                 break
         if valid_index == -1:
             if self._lut[-1][0] <= distance:
-                return 1
+                return 1.0
         if valid_index < 0:
-            return 0
+            return 0.0
         elif valid_index >= len(self._lut):
-            return 1
+            return 1.0
         else:
             dist0, t0 = self._lut[valid_index]
             dist1, t1 = self._lut[valid_index + 1]

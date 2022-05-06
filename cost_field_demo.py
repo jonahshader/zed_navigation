@@ -1,8 +1,11 @@
 import math
 
 import arcade
+import numpy as np
 import pyzed.sl as sl
 
+from bezier_stuff.bezier import Bezier, make_straight_bezier
+from bezier_stuff.bezier_optimizer import optimize_bezier_inner_points_on_field
 from cost_field import CostField
 
 SCREEN_WIDTH = 1024
@@ -18,6 +21,8 @@ class CostFieldDemo(arcade.Window):
         arcade.set_background_color(arcade.csscolor.WHITE)
         self.time = 0
         self.cost_field = CostField()
+        self.target_pos = np.array([0.0, 3.0])
+
 
         # create a camera object
         self.zed = sl.Camera()
@@ -53,6 +58,11 @@ class CostFieldDemo(arcade.Window):
         self.image_zed = sl.Mat(self.image_size.width, self.image_size.height, sl.MAT_TYPE.U8_C4)
         self.depth_image_zed = sl.Mat(self.image_size.width, self.image_size.height, sl.MAT_TYPE.U8_C4)
         self.point_cloud = sl.Mat()
+
+
+
+    def get_path_cost(self):
+        pass
 
     # ??? what does setup do again
     def setup(self):
@@ -112,6 +122,10 @@ class CostFieldDemo(arcade.Window):
             print("Translation: Tx: {0}, Ty: {1}, Tz {2}\n".format(tx, ty, tz))
             print(f'Rotation: Pitch: {pitch}, Roll: {roll}, Yaw: {yaw}')
 
+        self.unoptimized_bezier = make_straight_bezier(np.array([tx, tz]), np.copy(self.target_pos))
+        optimized_bezier = optimize_bezier_inner_points_on_field(self.unoptimized_bezier, self.cost_field)
+        # TODO: write Bezier method for rendering
+        # TODO: render optimzied bezier
         print('start render')
         arcade.start_render()
         print('add point')
