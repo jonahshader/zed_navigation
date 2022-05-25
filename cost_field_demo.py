@@ -21,7 +21,8 @@ class CostFieldDemo(arcade.Window):
         arcade.set_background_color(arcade.csscolor.WHITE)
         self.time = 0
         self.cost_field = CostField(beta=0.9)
-        self.target_pos = np.array([0.0, 3.0])
+        self.target_pos = np.array([0.0, -3.0])
+        self.unoptimized_bezier = make_straight_bezier(np.array([0, 0]), np.copy(self.target_pos))
 
 
         # create a camera object
@@ -58,8 +59,6 @@ class CostFieldDemo(arcade.Window):
         self.image_zed = sl.Mat(self.image_size.width, self.image_size.height, sl.MAT_TYPE.U8_C4)
         self.depth_image_zed = sl.Mat(self.image_size.width, self.image_size.height, sl.MAT_TYPE.U8_C4)
         self.point_cloud = sl.Mat()
-
-
 
     def get_path_cost(self):
         pass
@@ -122,8 +121,8 @@ class CostFieldDemo(arcade.Window):
             print("Translation: Tx: {0}, Ty: {1}, Tz {2}\n".format(tx, ty, tz))
             print(f'Rotation: Pitch: {pitch}, Roll: {roll}, Yaw: {yaw}')
 
-        self.unoptimized_bezier = make_straight_bezier(np.array([tx, tz]), np.copy(self.target_pos))
-        optimized_bezier = optimize_bezier_inner_points_on_field(self.unoptimized_bezier, self.cost_field)
+        # self.unoptimized_bezier = make_straight_bezier(np.array([tx, tz]), np.copy(self.target_pos))
+        optimized_bezier = optimize_bezier_inner_points_on_field(self.unoptimized_bezier, self.cost_field, samples=150, popsize=10, gensize=4, init_mutation=0.15)
         # TODO: write Bezier method for rendering
         # TODO: render optimzied bezier
         print('start render')
