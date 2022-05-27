@@ -37,7 +37,6 @@ class CostField:
             newval = field[point_in_field[1], point_in_field[0]] + (1 - self.beta)
             field[point_in_field[1], point_in_field[0]] = min(newval, 1.0)
 
-
     def update(self, cam_pos):
         self.cam_pos = cam_pos
         # calculate cam field pos
@@ -71,7 +70,6 @@ class CostField:
             return field[point_in_field[1], point_in_field[0]]
         else:
             return 1.0
-
 
     def display_all_fields(self, pixels_per_meter, offset):
         for field_pos, field in self.fields.items():
